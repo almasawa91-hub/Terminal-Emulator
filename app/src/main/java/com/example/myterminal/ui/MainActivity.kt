@@ -47,6 +47,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnNewSession).setOnClickListener { createSession() }
         sessionLabel.setOnClickListener { switchSession() }
         findViewById<Button>(R.id.btnExecute).setOnClickListener { runCommand() }
+        findViewById<Button>(R.id.btnInterrupt).setOnClickListener {
+            activeTab.terminal.interrupt()
+            appendEntry(activeTab, LogEntry("^C (shell reset requested)", LogType.ERROR))
+        }
 
         input.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false

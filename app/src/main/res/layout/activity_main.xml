@@ -28,6 +28,8 @@
             android:imeOptions="actionDone" android:inputType="textNoSuggestions"
             android:maxLines="4" android:padding="10dp" android:textColor="#FFFFFF"
             android:textColorHint="#888888" android:typeface="monospace" />
+        <Button android:id="@+id/btnInterrupt" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="إيقاف" />
         <Button android:id="@+id/btnExecute" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text="تنفيذ" />
     </LinearLayout>
