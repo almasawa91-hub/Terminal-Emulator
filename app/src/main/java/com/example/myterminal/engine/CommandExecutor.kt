@@ -20,7 +20,43 @@ class CommandExecutor(
         val onStderr: (String) -> Unit,
         val onComplete: (String, Int) -> Unit,
         val finished: CountDownLatch = CountDownLatch(1)
-    )
+    ) {
+        private var stdoutDone = false
+        private var stderrDone = false
+        private var completed = false
+        private var directory = ""
+        private var exitCode = 1
+
+        @Synchronized
+        fun markStdout(path: String, status: Int) {
+            directory = path
+            exitCode = status
+            stdoutDone = true
+            finishIfReady()
+        }
+
+        @Synchronized
+        fun markStderr() {
+            stderrDone = true
+            finishIfReady()
+        }
+
+        @Synchronized
+        fun fail(message: String, fallbackDirectory: String) {
+            if (completed) return
+            completed = true
+            onStderr(message)
+            onComplete(fallbackDirectory, 127)
+            finished.countDown()
+        }
+
+        private fun finishIfReady() {
+            if (completed || !stdoutDone || !stderrDone) return
+            completed = true
+            onComplete(directory, exitCode)
+            finished.countDown()
+        }
+    }
 
     private val commandQueue = Executors.newSingleThreadExecutor()
     @Volatile private var process: Process? = null
@@ -51,7 +87,7 @@ class CommandExecutor(
                 input.write(command)
                 input.newLine()
                 // Capture $? before printf changes the shell's last exit status.
-                input.write("__myterm_status=\$?; printf '\\n$marker\\t%s\\t%s\\n' \"\$PWD\" \"\$__myterm_status\"")
+                input.write("__myterm_status=\$?; printf '\\n$marker\\t%s\\t%s\\n' \"\$PWD\" \"\$__myterm_status\" >&8; printf '\\n$marker\\n' >&9")
                 input.newLine()
                 input.flush()
 
@@ -60,9 +96,7 @@ class CommandExecutor(
                 if (pending === task) pending = null
             } catch (error: Exception) {
                 pending?.let {
-                    it.onStderr("Terminal: ${error.message ?: "Unable to execute command"}")
-                    it.onComplete(homeDirectory.absolutePath, 127)
-                    it.finished.countDown()
+                    it.fail("Terminal: ${error.message ?: "Unable to execute command"}", homeDirectory.absolutePath)
                 }
                 pending = null
                 destroyShell()
@@ -102,6 +136,10 @@ class CommandExecutor(
         val started = builder.start()
         process = started
         shellInput = BufferedWriter(OutputStreamWriter(started.outputStream))
+        // Keep private protocol descriptors so user redirections do not swallow completion markers.
+        shellInput?.write("exec 8>&1 9>&2")
+        shellInput?.newLine()
+        shellInput?.flush()
         Thread({ readStdout(started) }, "myterminal-stdout").apply { isDaemon = true; start() }
         Thread({ readStderr(started) }, "myterminal-stderr").apply { isDaemon = true; start() }
     }
@@ -117,8 +155,7 @@ class CommandExecutor(
                         val directory = fields.getOrNull(1)?.takeIf { it.isNotBlank() }
                             ?: homeDirectory.absolutePath
                         val exitCode = fields.getOrNull(2)?.toIntOrNull() ?: 1
-                        task.onComplete(directory, exitCode)
-                        task.finished.countDown()
+                        task.markStdout(directory, exitCode)
                     } else {
                         task?.onStdout(line)
                     }
@@ -129,9 +166,7 @@ class CommandExecutor(
         } finally {
             if (process === shell) {
                 pending?.let { task ->
-                    task.onStderr("Terminal: shell process ended")
-                    task.onComplete(homeDirectory.absolutePath, 127)
-                    task.finished.countDown()
+                    task.fail("Terminal: shell process ended", homeDirectory.absolutePath)
                 }
             }
         }
@@ -142,7 +177,12 @@ class CommandExecutor(
             BufferedReader(InputStreamReader(shell.errorStream)).use { reader ->
                 while (true) {
                     val line = reader.readLine() ?: break
-                    pending?.onStderr(line)
+                    val task = pending
+                    if (task != null && line == task.marker) {
+                        task.markStderr()
+                    } else {
+                        task?.onStderr(line)
+                    }
                 }
             }
         } catch (_: Exception) {
