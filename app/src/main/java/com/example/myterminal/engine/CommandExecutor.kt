@@ -72,8 +72,18 @@ class CommandExecutor(
         }
     }
 
+    private fun isShellAlive(): Boolean {
+        val current = process ?: return false
+        return try {
+            current.exitValue()
+            false
+        } catch (_: IllegalThreadStateException) {
+            true
+        }
+    }
+
     private fun ensureShell() {
-        if (process?.isAlive == true && shellInput != null) return
+        if (isShellAlive() && shellInput != null) return
         destroyShell()
         val builder = ProcessBuilder("/system/bin/sh").directory(homeDirectory)
         builder.environment().apply {
