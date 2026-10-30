@@ -112,7 +112,7 @@ class CommandExecutor(
         val old = process
         process = null
         shellInput = null
-        try { old?.destroyForcibly() } catch (_: Exception) {
+        try { old?.destroy() } catch (_: Exception) {
             try { old?.destroy() } catch (_: Exception) {}
         }
     }
