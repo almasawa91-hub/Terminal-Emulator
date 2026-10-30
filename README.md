@@ -1,34 +1,44 @@
 # MyTerminal
 
-A native Android terminal interface written in Kotlin. It starts a persistent
-`/system/bin/sh` process using `ProcessBuilder` and keeps that same shell
-between commands, so shell built-ins such as `cd` and exported variables persist.
+Native Android terminal interface built with Kotlin and Android Views. Each
+terminal tab owns an independent persistent `/system/bin/sh` process.
 
-## Implemented
+## Features
 
-- Native black terminal screen with monospace text and scrollable history.
-- Command input, execute button, and keyboard action.
-- Persistent Android system shell (`/system/bin/sh`).
-- Separate live readers for stdout (white) and stderr (red).
-- Green command echo and persistent working directory.
+- Black terminal UI with monospace command and output text.
+- Command entry button and keyboard action.
+- Persistent shell per session; `cd` and exported shell variables persist.
+- Live line-based stdout (white) and stderr (red) readers.
+- Separate command history navigated with the keyboard up/down keys.
+- Multiple terminal sessions using `+ جلسة` and the session switch button.
+- `Ctrl+C` requests interruption by terminating the active shell process;
+  this resets that session's shell. Android may not terminate every detached
+  child process because this implementation does not yet use a PTY/process group.
 - App-private `filesDir` as the initial working directory and `HOME`.
-- The shell runs with the Android app's UID and normal Android permissions.
-- Commands available on the device can be used, including `ls`, `pwd`,
-  `cat`, `date`, `ping`, `mkdir`, and `rm`, subject to Android version,
-  executable availability, and device restrictions.
+- Built-in `help` and `clear` commands.
 
-## Android limitations
+## Shell command availability
 
-This is an Android system-shell terminal, not a complete Linux distribution
-like Termux. It does not bundle a package manager, GNU userland, root access,
-or a PTY/interactive terminal stack. Some commands (especially `ping`) may
-be missing or restricted by the device. Setting `filesDir` as HOME does not
-create a filesystem jail; Android's app UID sandbox and permissions still
-determine which files and system resources the process can access.
+Commands are executed by the Android device's `/system/bin/sh`. Availability
+and permissions depend on the Android version and device image. Common examples
+include `pwd`, `ls`, `cat`, `date`, `mkdir`, `rm`, `cp`, `mv`, `grep`,
+`find`, `chmod`, `df`, `du`, `ps`, `env`, `whoami`, and `uname`.
+Some devices do not include `ping`, or restrict its use.
+
+## Important limitations
+
+This is a system-shell terminal, not a full Linux distribution such as Termux.
+It does not bundle a package manager or GNU/Linux userland, does not provide
+root, and does not yet implement a PTY/terminal emulator. As a result, full-screen
+interactive programs (for example editors, shells that prompt for passwords,
+and programs that require raw terminal input) are not supported. Job control,
+terminal escape-sequence rendering, and guaranteed process-group Ctrl+C are
+also not implemented. App-private HOME is the initial directory, not a
+filesystem jail; Android's application UID sandbox and permissions still apply.
 
 ## Build in Android Studio
 
-1. Open this repository in Android Studio.
+1. Open the repository in Android Studio.
 2. Use JDK 17 and install Android SDK Platform 35.
 3. Sync Gradle and run the `app` configuration on an Android device/emulator.
 
