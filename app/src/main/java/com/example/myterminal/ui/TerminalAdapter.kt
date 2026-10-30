@@ -37,13 +37,10 @@ class TerminalAdapter : RecyclerView.Adapter<TerminalAdapter.ViewHolder>() {
     }
 
     override fun getItemCount() = logs.size
-    fun addLog(entry: LogEntry) {
-        logs.add(entry)
-        notifyItemInserted(logs.lastIndex)
-    }
-    fun clear() {
-        val oldSize = logs.size
+
+    fun replaceLogs(entries: List<LogEntry>) {
         logs.clear()
-        if (oldSize > 0) notifyItemRangeRemoved(0, oldSize)
+        logs.addAll(entries)
+        notifyDataSetChanged()
     }
 }

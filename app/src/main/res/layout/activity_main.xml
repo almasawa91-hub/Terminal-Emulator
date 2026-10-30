@@ -2,9 +2,24 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="#000000" android:orientation="vertical" android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:orientation="horizontal">
+        <Button
+            android:id="@+id/btnNewSession"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:minWidth="48dp" android:text="+ جلسة" />
+        <Button
+            android:id="@+id/btnNextSession"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="8dp" android:text="جلسة 1/1 ›" />
+    </LinearLayout>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewTerminal" android:layout_width="match_parent"
         android:layout_height="0dp" android:layout_weight="1" android:scrollbars="vertical" />
+
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:gravity="center_vertical" android:orientation="horizontal">
         <EditText android:id="@+id/editTextCommand" android:layout_width="0dp"
