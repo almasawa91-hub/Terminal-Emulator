@@ -8,7 +8,6 @@ import java.io.OutputStreamWriter
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 /** Owns one persistent /system/bin/sh process and streams both output channels. */
 class CommandExecutor(
@@ -24,7 +23,6 @@ class CommandExecutor(
     )
 
     private val commandQueue = Executors.newSingleThreadExecutor()
-    private val sequence = AtomicLong()
     @Volatile private var process: Process? = null
     @Volatile private var shellInput: BufferedWriter? = null
     @Volatile private var pending: PendingCommand? = null
@@ -45,7 +43,7 @@ class CommandExecutor(
             if (closed) return@commandTask
             try {
                 ensureShell()
-                val marker = "__MYTERMINAL_${sequence.incrementAndGet()}__"
+                val marker = "__MYTERMINAL_${java.util.UUID.randomUUID().toString().replace("-", "")}__"
                 val task = PendingCommand(marker, onStdout, onStderr, onComplete)
                 pending = task
 
@@ -69,6 +67,14 @@ class CommandExecutor(
                 pending = null
                 destroyShell()
             }
+        }
+    }
+
+
+    /** Run a UI-side built-in in the same queue as shell commands. */
+    fun executeLocal(action: () -> Unit) {
+        commandQueue.execute {
+            if (!closed) action()
         }
     }
 

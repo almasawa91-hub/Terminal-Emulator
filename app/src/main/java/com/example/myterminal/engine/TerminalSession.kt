@@ -24,17 +24,21 @@ class TerminalSession(internalDirectory: File, cacheDirectory: File) {
 
         when (command) {
             "clear" -> {
-                onEntry(LogEntry("\u0000CLEAR", LogType.OUTPUT))
+                executor.executeLocal {
+                    onEntry(LogEntry("\u0000CLEAR", LogType.OUTPUT))
+                }
                 return
             }
             "help" -> {
-                onEntry(LogEntry(
-                    "Android system shell: /system/bin/sh\n" +
-                        "Examples: pwd, ls, cd, cat, date, ping, mkdir, rm, cp, mv, echo, grep, find, chmod, df, du, ps, env, whoami, uname\n" +
-                        "HOME: $homeDirectory\n" +
-                        "Commands run with this app's Android UID and permissions.",
-                    LogType.OUTPUT
-                ))
+                executor.executeLocal {
+                    onEntry(LogEntry(
+                        "Android system shell: /system/bin/sh\n" +
+                            "Examples: pwd, ls, cd, cat, date, ping, mkdir, rm, cp, mv, echo, grep, find, chmod, df, du, ps, env, whoami, uname\n" +
+                            "HOME: $homeDirectory\n" +
+                            "Commands run with this app's Android UID and permissions.",
+                        LogType.OUTPUT
+                    ))
+                }
                 return
             }
         }
