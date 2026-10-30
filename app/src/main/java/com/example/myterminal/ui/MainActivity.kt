@@ -21,20 +21,25 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         list = findViewById(R.id.recyclerViewTerminal)
         input = findViewById(R.id.editTextCommand)
         adapter = TerminalAdapter()
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
-        session = TerminalSession(filesDir)
 
-        adapter.addLog(LogEntry("Welcome to MyTerminal 1.0", LogType.OUTPUT))
-        adapter.addLog(LogEntry("Sandbox directory: ${session.currentDirectory.absolutePath}", LogType.OUTPUT))
-        adapter.addLog(LogEntry("Type help to see available commands.", LogType.OUTPUT))
+        session = TerminalSession(filesDir, cacheDir)
+        adapter.addLog(LogEntry("MyTerminal — Android system shell", LogType.OUTPUT))
+        adapter.addLog(LogEntry("HOME: ${filesDir.absolutePath}", LogType.OUTPUT))
+        adapter.addLog(LogEntry("Type help to view examples.", LogType.OUTPUT))
+        input.hint = "${session.currentDirectory} $"
 
         findViewById<Button>(R.id.btnExecute).setOnClickListener { runCommand() }
         input.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO) {
+            if (actionId == EditorInfo.IME_ACTION_DONE ||
+                actionId == EditorInfo.IME_ACTION_GO ||
+                actionId == EditorInfo.IME_ACTION_SEND
+            ) {
                 runCommand()
                 true
             } else false
@@ -45,17 +50,27 @@ class MainActivity : AppCompatActivity() {
         val command = input.text.toString()
         if (command.isBlank()) return
         input.text.clear()
-        session.handleCommand(command) { entry ->
-            runOnUiThread {
-                if (entry.text == "\u0000CLEAR") {
-                    // Clear only the visible transcript.
-                    adapter = TerminalAdapter()
-                    list.adapter = adapter
-                } else {
-                    adapter.addLog(entry)
-                    list.scrollToPosition(adapter.itemCount - 1)
+
+        session.execute(
+            input = command,
+            onEntry = { entry ->
+                runOnUiThread {
+                    if (entry.text == "\u0000CLEAR") {
+                        adapter.clear()
+                    } else {
+                        adapter.addLog(entry)
+                        if (adapter.itemCount > 0) list.scrollToPosition(adapter.itemCount - 1)
+                    }
                 }
+            },
+            onDirectoryChanged = { directory ->
+                runOnUiThread { input.hint = "$directory $" }
             }
-        }
+        )
+    }
+
+    override fun onDestroy() {
+        if (::session.isInitialized) session.close()
+        super.onDestroy()
     }
 }
