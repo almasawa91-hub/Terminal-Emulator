@@ -105,6 +105,18 @@ class CommandExecutor(
     }
 
 
+    /** Interrupt the active shell command. The next command starts a fresh shell. */
+    fun interrupt() {
+        val active = pending
+        active?.fail("^C", homeDirectory.absolutePath)
+        val old = process
+        process = null
+        shellInput = null
+        try { old?.destroyForcibly() } catch (_: Exception) {
+            try { old?.destroy() } catch (_: Exception) {}
+        }
+    }
+
     /** Run a UI-side built-in in the same queue as shell commands. */
     fun executeLocal(action: () -> Unit) {
         commandQueue.execute {

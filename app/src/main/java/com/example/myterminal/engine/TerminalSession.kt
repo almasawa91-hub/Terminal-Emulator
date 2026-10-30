@@ -54,5 +54,7 @@ class TerminalSession(internalDirectory: File, cacheDirectory: File) {
         )
     }
 
+    fun interrupt() = executor.interrupt()
+
     fun close() = executor.close()
 }

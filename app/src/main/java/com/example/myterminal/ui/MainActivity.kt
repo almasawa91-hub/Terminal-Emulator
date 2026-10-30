@@ -1,6 +1,7 @@
 package com.example.myterminal.ui
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
@@ -17,6 +18,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: TerminalAdapter
     private lateinit var list: RecyclerView
     private lateinit var input: EditText
+    private val commandHistory = mutableListOf<String>()
+    private var historyPosition = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +38,34 @@ class MainActivity : AppCompatActivity() {
         input.hint = "${session.currentDirectory} $"
 
         findViewById<Button>(R.id.btnExecute).setOnClickListener { runCommand() }
+        input.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            when {
+                keyCode == KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (commandHistory.isNotEmpty()) {
+                        historyPosition = (historyPosition - 1).coerceAtLeast(0)
+                        input.setText(commandHistory[historyPosition])
+                        input.setSelection(input.text.length)
+                    }
+                    true
+                }
+                keyCode == KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (commandHistory.isNotEmpty()) {
+                        historyPosition = (historyPosition + 1).coerceAtMost(commandHistory.size)
+                        input.setText(commandHistory.getOrElse(historyPosition) { "" })
+                        input.setSelection(input.text.length)
+                    }
+                    true
+                }
+                keyCode == KeyEvent.KEYCODE_C &&
+                    event.isCtrlPressed -> {
+                    session.interrupt()
+                    adapter.addLog(LogEntry("^C", LogType.ERROR))
+                    true
+                }
+                else -> false
+            }
+        }
         input.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE ||
                 actionId == EditorInfo.IME_ACTION_GO ||
@@ -50,6 +81,8 @@ class MainActivity : AppCompatActivity() {
         val command = input.text.toString()
         if (command.isBlank()) return
         input.text.clear()
+        commandHistory.add(command)
+        historyPosition = commandHistory.size
 
         session.execute(
             input = command,
